@@ -1,0 +1,38 @@
+version: '3.7'
+
+services:
+  db:
+    image: mongo:latest
+    container_name: mongo_db
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7
+    container_name: redis_cache
+
+  bot:
+    image: bot_app
+    build:
+      context: /bot/.
+    env_file:
+      - .env-non-dev
+    depends_on:
+      - redis
+      - db
+    command: python main.py
+
+  api:
+    image: api_app
+    build:
+      context: /api/.
+    env_file:
+      - .env-non-dev
+    depends_on:
+      - db
+      - redis
+    command: sh -c "gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8000"
+    ports:
+    - "8000:8000"
+volumes:
+  mongo_data:
